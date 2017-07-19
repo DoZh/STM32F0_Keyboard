@@ -146,7 +146,7 @@ __ALIGN_BEGIN static uint8_t USBD_HID_CfgDesc[USB_HID_CONFIG_DESC_SIZ]  __ALIGN_
   0x01,         /*bConfigurationValue: Configuration value*/
   0x00,         /*iConfiguration: Index of string descriptor describing
   the configuration*/
-  0xE0,         /*bmAttributes: bus powered and Support Remote Wake-up */
+  0xC0,         /*bmAttributes: bus powered and Support Remote Wake-up */
   0x32,         /*MaxPower 100 mA: this current is used for detecting Vbus*/
   
   /************** Descriptor of Joystick Mouse interface ****************/
@@ -155,23 +155,23 @@ __ALIGN_BEGIN static uint8_t USBD_HID_CfgDesc[USB_HID_CONFIG_DESC_SIZ]  __ALIGN_
   USB_DESC_TYPE_INTERFACE,/*bDescriptorType: Interface descriptor type*/
   0x00,         /*bInterfaceNumber: Number of Interface*/
   0x00,         /*bAlternateSetting: Alternate setting*/
-  0x01,         /*bNumEndpoints*/
+  0x02,         /*bNumEndpoints*/
   0x03,         /*bInterfaceClass: HID*/
   0x01,         /*bInterfaceSubClass : 1=BOOT, 0=no boot*/
-  0x02,         /*nInterfaceProtocol : 0=none, 1=keyboard, 2=mouse*/
+  0x01,         /*nInterfaceProtocol : 0=none, 1=keyboard, 2=mouse*/
   0,            /*iInterface: Index of string descriptor*/
   /******************** Descriptor of Joystick Mouse HID ********************/
   /* 18 */
   0x09,         /*bLength: HID Descriptor size*/
   HID_DESCRIPTOR_TYPE, /*bDescriptorType: HID*/
-  0x11,         /*bcdHID: HID Class Spec release number*/
+  0x10,         /*bcdHID: HID Class Spec release number*/
   0x01,
-  0x00,         /*bCountryCode: Hardware target country*/
+  0x21,         /*bCountryCode: Hardware target country*/
   0x01,         /*bNumDescriptors: Number of HID class descriptors to follow*/
   0x22,         /*bDescriptorType*/
   HID_MOUSE_REPORT_DESC_SIZE,/*wItemLength: Total length of Report descriptor*/
   0x00,
-  /******************** Descriptor of Mouse endpoint ********************/
+  /******************** Descriptor of IN endpoint ********************/
   /* 27 */
   0x07,          /*bLength: Endpoint Descriptor size*/
   USB_DESC_TYPE_ENDPOINT, /*bDescriptorType:*/
@@ -181,18 +181,28 @@ __ALIGN_BEGIN static uint8_t USBD_HID_CfgDesc[USB_HID_CONFIG_DESC_SIZ]  __ALIGN_
   HID_EPIN_SIZE, /*wMaxPacketSize: 4 Byte max */
   0x00,
   HID_FS_BINTERVAL,          /*bInterval: Polling Interval (10 ms)*/
-  /* 34 */
+  /******************** Descriptor of OUT endpoint ********************/
+	/* 34 */
+	0x07,         	/* bLength:*/
+	USB_DESC_TYPE_ENDPOINT, /* bDescriptorType 0x05*/
+	0x01,         	/* bEndpointAddress*/               
+	0x03,         	/* bmAttributes:*/
+
+	0x01,         	/* wMaxPacketSize:*/
+	0x00,
+	0x0A,         	/* bInterval:(32ms) */
+ /* 41 */
 } ;
 
 /* USB HID device Configuration Descriptor */
 __ALIGN_BEGIN static uint8_t USBD_HID_Desc[USB_HID_DESC_SIZ]  __ALIGN_END  =
 {
-  /* 18 */
+	/* 18 */
   0x09,         /*bLength: HID Descriptor size*/
   HID_DESCRIPTOR_TYPE, /*bDescriptorType: HID*/
-  0x11,         /*bcdHID: HID Class Spec release number*/
+  0x10,         /*bcdHID: HID Class Spec release number*/
   0x01,
-  0x00,         /*bCountryCode: Hardware target country*/
+  0x21,         /*bCountryCode: Hardware target country*/
   0x01,         /*bNumDescriptors: Number of HID class descriptors to follow*/
   0x22,         /*bDescriptorType*/
   HID_MOUSE_REPORT_DESC_SIZE,/*wItemLength: Total length of Report descriptor*/
@@ -215,54 +225,80 @@ __ALIGN_BEGIN static uint8_t USBD_HID_DeviceQualifierDesc[USB_LEN_DEV_QUALIFIER_
 };
 
 __ALIGN_BEGIN static uint8_t HID_MOUSE_ReportDesc[HID_MOUSE_REPORT_DESC_SIZE]  __ALIGN_END =
-{
-  0x05,   0x01,
-  0x09,   0x02,
-  0xA1,   0x01,
-  0x09,   0x01,
-  
-  0xA1,   0x00,
-  0x05,   0x09,
-  0x19,   0x01,
-  0x29,   0x03,
-  
-  0x15,   0x00,
-  0x25,   0x01,
-  0x95,   0x03,
-  0x75,   0x01,
-  
-  0x81,   0x02,
-  0x95,   0x01,
-  0x75,   0x05,
-  0x81,   0x01,
-  
-  0x05,   0x01,
-  0x09,   0x30,
-  0x09,   0x31,
-  0x09,   0x38,
-  
-  0x15,   0x81,
-  0x25,   0x7F,
-  0x75,   0x08,
-  0x95,   0x03,
-  
-  0x81,   0x06,
-  0xC0,   0x09,
-  0x3c,   0x05,
-  0xff,   0x09,
-  
-  0x01,   0x15,
-  0x00,   0x25,
-  0x01,   0x75,
-  0x01,   0x95,
-  
-  0x02,   0xb1,
-  0x22,   0x75,
-  0x06,   0x95,
-  0x01,   0xb1,
-  
-  0x01,   0xc0
+
+{ 	
+
+	
+	//0x05:0000 01 01 ???????,???????????
+	0x05, 0x01, // USAGE_PAGE (Generic Desktop)
+	//0x09:0000 10 01 ???????,???????
+	0x09, 0x06, // USAGE (Keyboard)
+	//0xa1:1010 00 01 ??????,???????,
+	0xa1, 0x01, // COLLECTION (Application)
+	//0x05:0000 01 11 ???????,????????/??
+	0x05, 0x07, // USAGE_PAGE (Keyboard/Keypad)
+
+	//0x19:0001 10 01 ???????,???????0xe0,???????ctrl?
+	0x19, 0xe0, // USAGE_MINIMUM (Keyboard LeftControl)
+	//0x29:0010 10 01 ???????,???????0xe7,???????GUI(WIN)?
+	0x29, 0xe7, // USAGE_MAXIMUM (Keyboard Right GUI)
+	//0x15:0001 01 01 ???????,????????????0
+	0x15, 0x00, // LOGICAL_MINIMUM (0)
+	//0x25:0010 01 01 ???????,????????????1
+	0x25, 0x01, // LOGICAL_MAXIMUM (1)
+
+	//0x95:1001 01 01 ???????,???????8?
+	0x95, 0x08, // REPORT_COUNT (8)
+	//0x75:0111 01 01 ???????,?????????1?
+	0x75, 0x01, // REPORT_SIZE (1)	   
+	//0x81:1000 00 01 ??????,?8*1bit???????,???:Data,Var,Abs
+	0x81, 0x02, // INPUT (Data,Var,Abs)
+
+	//0x95:1001 01 01 ???????,???????1?
+	0x95, 0x01, // REPORT_COUNT (1)
+	//0x75:0111 01 01 ???????,?????????8?
+	0x75, 0x08, // REPORT_SIZE (8)
+	//0x81:1000 00 01 ??????,?1*8bit???????,???:Cnst,Var,Abs
+	0x81, 0x03, // INPUT (Cnst,Var,Abs)
+
+	//0x95:1001 01 01 ???????,???????6?
+	0x95, 0x06, // REPORT_COUNT (6)
+	//0x75:0111 01 01 ???????,?????????8?
+	0x75, 0x08, // REPORT_SIZE (8)
+	//0x25:0010 01 01 ???????,??????255
+	0x25, 0xFF, // LOGICAL_MAXIMUM (255)
+	//0x19:0001 10 01 ???????,???????0
+	0x19, 0x00, // USAGE_MINIMUM (Reserved (no event indicated))
+	//0x29:0010 10 01 ???????,???????0x65
+	0x29, 0x65, // USAGE_MAXIMUM (Keyboard Application)
+	//0x81:1000 00 01 ??????,?6*8bit????????,??????:Data,Var,Abs
+	0x81, 0x00, // INPUT (Data,Ary,Abs)
+
+	//0x25:0010 01 01 ???????,???????1
+	0x25, 0x01, // LOGICAL_MAXIMUM (1)
+	//0x95:1001 01 01 ???????,???????2
+	0x95, 0x02, // REPORT_COUNT (2)
+	//0x75:0111 01 01 ???????,?????????1?
+	0x75, 0x01, // REPORT_SIZE (1)
+	//0x05:0000 01 01 ???????,??????LED?
+	0x05, 0x08, // USAGE_PAGE (LEDs)
+	//0x19:0001 10 01 ???????,???????0x01,??????Num Lock
+	0x19, 0x01, // USAGE_MINIMUM (Num Lock)
+	//0x29:0010 10 01 ???????,???????0x02,??????Caps Lock
+	0x29, 0x02, // USAGE_MAXIMUM (Caps Lock)
+	//0x91:1001 00 01 ??????,?2*1bit????????,???:Data,Var,Abs
+	0x91, 0x02, // OUTPUT (Data,Var,Abs)
+
+	//0x95:1001 01 01 ???????,???????1?
+	0x95, 0x01, // REPORT_COUNT (1)
+	//0x75:0111 01 01 ???????,?????????6bit,??????2bit??1??
+	0x75, 0x06, // REPORT_SIZE (6)
+	//0x91:1001 00 01 ??????,?1*6bit???????,???:Cnst,Var,Abs
+	0x91, 0x03, // OUTPUT (Cnst,Var,Abs)
+
+	0xc0        // END_COLLECTION
 }; 
+
 
 /**
   * @}
