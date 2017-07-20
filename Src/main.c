@@ -58,7 +58,8 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+uint8_t sendButtonBuff[8]={0, 0, 0x04, 0, 0, 0, 0, 0};
+uint8_t sendVoidBuff[8]={0, 0, 0, 0, 0, 0, 0, 0};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -67,7 +68,9 @@ static void MX_GPIO_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-
+extern uint8_t USBD_HID_SendReport (USBD_HandleTypeDef *pdev, 
+                                 uint8_t *report,
+                                 uint16_t len);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -112,7 +115,31 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-
+		HAL_Delay(5000);
+		USBD_HID_SendReport(&hUsbDeviceFS, sendButtonBuff, 8);
+		HAL_Delay(1);
+		USBD_HID_SendReport(&hUsbDeviceFS, sendButtonBuff, 8);
+		HAL_Delay(1);
+		USBD_HID_SendReport(&hUsbDeviceFS, sendButtonBuff, 8);
+		HAL_Delay(1);
+		USBD_HID_SendReport(&hUsbDeviceFS, sendButtonBuff, 8);
+		HAL_Delay(1);
+		USBD_HID_SendReport(&hUsbDeviceFS, sendButtonBuff, 8);
+		HAL_Delay(1);
+		USBD_HID_SendReport(&hUsbDeviceFS, sendButtonBuff, 8);
+		HAL_Delay(1);
+		USBD_HID_SendReport(&hUsbDeviceFS, sendButtonBuff, 8);
+		HAL_Delay(1);
+		USBD_HID_SendReport(&hUsbDeviceFS, sendVoidBuff, 8);
+		HAL_Delay(1);
+		USBD_HID_SendReport(&hUsbDeviceFS, sendVoidBuff, 8);
+		HAL_Delay(1);
+		USBD_HID_SendReport(&hUsbDeviceFS, sendVoidBuff, 8);
+		HAL_Delay(1);
+		USBD_HID_SendReport(&hUsbDeviceFS, sendVoidBuff, 8);
+		HAL_Delay(1);
+		USBD_HID_SendReport(&hUsbDeviceFS, sendVoidBuff, 8);
+		HAL_Delay(1);
   }
   /* USER CODE END 3 */
 
