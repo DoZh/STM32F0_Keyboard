@@ -55,16 +55,21 @@
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
+TIM_HandleTypeDef htim7;
+
+UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 uint8_t sendButtonBuff[8]={0, 0, 0x04, 0, 0, 0, 0, 0};
-uint8_t sendVoidBuff[8]={0, 0, 0, 0, 0, 0, 0, 0};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_TIM7_Init(void);
+static void MX_USART2_UART_Init(void);
+static void MX_NVIC_Init(void);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -103,9 +108,16 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USB_DEVICE_Init();
+  MX_TIM7_Init();
+  MX_USART2_UART_Init();
+
+  /* Initialize interrupts */
+  MX_NVIC_Init();
 
   /* USER CODE BEGIN 2 */
-
+	
+	HAL_TIM_Base_Start_IT(&htim7);
+	
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -116,30 +128,11 @@ int main(void)
 
   /* USER CODE BEGIN 3 */
 		HAL_Delay(5000);
-		USBD_HID_SendReport(&hUsbDeviceFS, sendButtonBuff, 8);
-		HAL_Delay(1);
-		USBD_HID_SendReport(&hUsbDeviceFS, sendButtonBuff, 8);
-		HAL_Delay(1);
-		USBD_HID_SendReport(&hUsbDeviceFS, sendButtonBuff, 8);
-		HAL_Delay(1);
-		USBD_HID_SendReport(&hUsbDeviceFS, sendButtonBuff, 8);
-		HAL_Delay(1);
-		USBD_HID_SendReport(&hUsbDeviceFS, sendButtonBuff, 8);
-		HAL_Delay(1);
-		USBD_HID_SendReport(&hUsbDeviceFS, sendButtonBuff, 8);
-		HAL_Delay(1);
-		USBD_HID_SendReport(&hUsbDeviceFS, sendButtonBuff, 8);
-		HAL_Delay(1);
-		USBD_HID_SendReport(&hUsbDeviceFS, sendVoidBuff, 8);
-		HAL_Delay(1);
-		USBD_HID_SendReport(&hUsbDeviceFS, sendVoidBuff, 8);
-		HAL_Delay(1);
-		USBD_HID_SendReport(&hUsbDeviceFS, sendVoidBuff, 8);
-		HAL_Delay(1);
-		USBD_HID_SendReport(&hUsbDeviceFS, sendVoidBuff, 8);
-		HAL_Delay(1);
-		USBD_HID_SendReport(&hUsbDeviceFS, sendVoidBuff, 8);
-		HAL_Delay(1);
+		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_0);
+		sendButtonBuff[2] = 0x04;
+		HAL_Delay(100);
+		sendButtonBuff[2] = 0x00;
+		
   }
   /* USER CODE END 3 */
 
@@ -177,7 +170,8 @@ void SystemClock_Config(void)
     _Error_Handler(__FILE__, __LINE__);
   }
 
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB|RCC_PERIPHCLK_USART2;
+  PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
   PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_HSI48;
 
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
@@ -197,6 +191,61 @@ void SystemClock_Config(void)
   HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 }
 
+/** NVIC Configuration
+*/
+static void MX_NVIC_Init(void)
+{
+  /* TIM7_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(TIM7_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(TIM7_IRQn);
+}
+
+/* TIM7 init function */
+static void MX_TIM7_Init(void)
+{
+
+  TIM_MasterConfigTypeDef sMasterConfig;
+
+  htim7.Instance = TIM7;
+  htim7.Init.Prescaler = 47;
+  htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim7.Init.Period = 999;
+  htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
+/* USART2 init function */
+static void MX_USART2_UART_Init(void)
+{
+
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
 /** Configure pins as 
         * Analog 
         * Input 
@@ -207,9 +256,21 @@ void SystemClock_Config(void)
 static void MX_GPIO_Init(void)
 {
 
+  GPIO_InitTypeDef GPIO_InitStruct;
+
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : PA0 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 }
 
