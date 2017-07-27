@@ -51,10 +51,14 @@
 #include "usb_device.h"
 
 /* USER CODE BEGIN Includes */
-
+//#include "ws2812b.h"
+#include "visEffect.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
+SPI_HandleTypeDef hspi1;
+SPI_HandleTypeDef hspi2;
+
 TIM_HandleTypeDef htim7;
 
 UART_HandleTypeDef huart2;
@@ -62,6 +66,10 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 uint8_t sendButtonBuff[8]={0, 0, 0x04, 0, 0, 0, 0, 0};
+uint8_t buttonColor[3][104];
+uint8_t pixelDataFlow[1024+3*104*4];
+//uint8_t pixelReset[1024];
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -69,6 +77,8 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM7_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_SPI1_Init(void);
+static void MX_SPI2_Init(void);
 static void MX_NVIC_Init(void);
 
 /* USER CODE BEGIN PFP */
@@ -76,6 +86,8 @@ static void MX_NVIC_Init(void);
 extern uint8_t USBD_HID_SendReport (USBD_HandleTypeDef *pdev, 
                                  uint8_t *report,
                                  uint16_t len);
+extern void ws2812b_init(void);
+extern void ws2812b_handle(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -86,7 +98,7 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+	char hello[] = "Hello,World!\n";
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -95,7 +107,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+	
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -110,14 +122,57 @@ int main(void)
   MX_USB_DEVICE_Init();
   MX_TIM7_Init();
   MX_USART2_UART_Init();
+  MX_SPI1_Init();
+  MX_SPI2_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
 
   /* USER CODE BEGIN 2 */
+	visInit();
 	
 	HAL_TIM_Base_Start_IT(&htim7);
+	uint8_t i;
+	for(i = 0; i < 104; i++)
+	{
+		/*
+		buttonColor[0][i] = i ;
+		buttonColor[1][i] = i ;
+		buttonColor[2][i] = i ;
+		*/
+		/*
+		buttonColor[0][i] = ((i + 3) * 247 + 48) / 5 % 0xFF ;
+		buttonColor[1][i] = ((i + 158) * 87 + 7) / 77 % 0xFF ;
+		buttonColor[2][i] = ((i + 8) * 5 + 21) / 12 % 0xFF ;
+		*/
+		
+		buttonColor[0][i] = 0x00 ;
+		buttonColor[1][i] = 0x01 ;
+		buttonColor[2][i] = 0x01 ;
+		
+	}
 	
+	uint16_t pixelIndex = 0;
+	for(i = 0; i < 104; i++)
+	{
+		for(uint8_t countrgb = 0; countrgb < 3; countrgb ++)
+		{
+			pixelIndex = 1024 + i*3*4 + (countrgb*4);
+			for(uint8_t count = 0; count < 4; count ++)
+			{
+				pixelDataFlow[pixelIndex] = 0x88;
+				if(buttonColor[countrgb][i] & 1 << count*2)
+				{
+					pixelDataFlow[pixelIndex] += 0x60;
+				}
+				if(buttonColor[countrgb][i] & 1 << (count*2 + 1))
+				{
+					pixelDataFlow[pixelIndex] += 0x06;
+				}
+				pixelIndex++;
+			}
+		}
+	}
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -127,12 +182,21 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-		HAL_Delay(5000);
+		
 		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_0);
 		sendButtonBuff[2] = 0x04;
-		HAL_Delay(100);
+		//HAL_Delay(100);
 		sendButtonBuff[2] = 0x00;
+		//HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_RESET);
 		
+		//HAL_SPI_Transmit(&hspi2, pixelReset, 1024, 1000);
+		HAL_SPI_Transmit(&hspi2, pixelDataFlow, 1024+3*104*4, 1000);
+		
+		HAL_UART_Transmit(&huart2, (uint8_t *)hello, sizeof(hello), 1000);
+
+		visHandle();
+		
+		//HAL_Delay(10000);
   }
   /* USER CODE END 3 */
 
@@ -200,6 +264,56 @@ static void MX_NVIC_Init(void)
   HAL_NVIC_EnableIRQ(TIM7_IRQn);
 }
 
+/* SPI1 init function */
+static void MX_SPI1_Init(void)
+{
+
+  hspi1.Instance = SPI1;
+  hspi1.Init.Mode = SPI_MODE_MASTER;
+  hspi1.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi1.Init.NSS = SPI_NSS_HARD_OUTPUT;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
+  hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi1.Init.CRCPolynomial = 7;
+  hspi1.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
+  hspi1.Init.NSSPMode = SPI_NSS_PULSE_ENABLE;
+  if (HAL_SPI_Init(&hspi1) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
+/* SPI2 init function */
+static void MX_SPI2_Init(void)
+{
+
+  hspi2.Instance = SPI2;
+  hspi2.Init.Mode = SPI_MODE_MASTER;
+  hspi2.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi2.Init.CLKPolarity = SPI_POLARITY_HIGH;
+  hspi2.Init.CLKPhase = SPI_PHASE_2EDGE;
+  hspi2.Init.NSS = SPI_NSS_SOFT;
+  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
+  hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi2.Init.CRCPolynomial = 7;
+  hspi2.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
+  hspi2.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
+  if (HAL_SPI_Init(&hspi2) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
 /* TIM7 init function */
 static void MX_TIM7_Init(void)
 {
@@ -261,6 +375,7 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
