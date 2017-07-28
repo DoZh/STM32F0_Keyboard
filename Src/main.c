@@ -79,7 +79,7 @@ UART_HandleTypeDef huart2;
 uint8_t sendButtonBuff[8]={0, 0, 0x04, 0, 0, 0, 0, 0};
 uint8_t buttonColor[3][104];
 uint8_t pixelDataFlow[1024+3*104*4];
-uint32_t buttonColorIndex;
+uint8_t colorDataFlow[3*104 + 300];
 TIM_OC_InitTypeDef mysConfigOC;
 //uint8_t pixelReset[1024];
 
@@ -383,7 +383,8 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
 
-	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+	//HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_1);
 	HAL_TIM_Base_Start_IT(&htim7);
 
 	for(i = 0; i < 104; i++)
@@ -461,14 +462,15 @@ int main(void)
 		rainbowCycle(20);//??
 		theaterChaseRainbow(50);//???
 		*/
+		rst();
 		for (i = 0; i<255; i++)
-			Din_0();
+			Din_1();
 		for (i = 0; i<255; i++)
 		{
 			//Din_0();
 			Din_1();
 		}
-		rst();
+		
 		HAL_Delay(1000);
   }
   /* USER CODE END 3 */
@@ -535,6 +537,9 @@ static void MX_NVIC_Init(void)
   /* TIM7_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(TIM7_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(TIM7_IRQn);
+  /* TIM2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(TIM2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(TIM2_IRQn);
 }
 
 /* SPI1 init function */
