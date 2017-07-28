@@ -369,7 +369,7 @@
               <MiscControls>--C99</MiscControls>
               <Define>USE_HAL_DRIVER,STM32F072xB</Define>
               <Undefine></Undefine>
-              <IncludePath>../Inc;      ../Drivers/STM32F0xx_HAL_Driver/Inc;      ../Drivers/STM32F0xx_HAL_Driver/Inc/Legacy;      ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc;      ../Middlewares/ST/STM32_USB_Device_Library/Class/HID/Inc;      ../Drivers/CMSIS/Device/ST/STM32F0xx/Include;      ../Drivers/CMSIS/Include</IncludePath>
+              <IncludePath>../Inc;         ../Drivers/STM32F0xx_HAL_Driver/Inc;         ../Drivers/STM32F0xx_HAL_Driver/Inc/Legacy;         ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc;         ../Middlewares/ST/STM32_USB_Device_Library/Class/HID/Inc;         ../Drivers/CMSIS/Device/ST/STM32F0xx/Include;         ../Drivers/CMSIS/Include</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -546,16 +546,6 @@
               <FileName>stm32f0xx_hal_msp.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Src/stm32f0xx_hal_msp.c</FilePath>
-            </File>
-            <File>
-              <FileName>ws2812b.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Src\ws2812b.c</FilePath>
-            </File>
-            <File>
-              <FileName>visEffect.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Src\visEffect.c</FilePath>
             </File>
           </Files>
         </Group>

@@ -53,12 +53,23 @@
 /* USER CODE BEGIN Includes */
 //#include "ws2812b.h"
 //#include "visEffect.h"
+
+char RxData[11]={'0'};
+uint8_t MyColor[3]={0};
+
+#define UserLED_Toggle()	 HAL_GPIO_TogglePin(UserLED_GPIO_Port,UserLED_Pin)
+#define UserLED_ON()  		 HAL_GPIO_WritePin(UserLED_GPIO_Port,UserLED_Pin,GPIO_PIN_SET)
+#define UserLED_OFF() 		 HAL_GPIO_WritePin(UserLED_GPIO_Port,UserLED_Pin,GPIO_PIN_RESET)
+
+#define numLEDs 9
+
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi2;
 
+TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim7;
 
 UART_HandleTypeDef huart2;
@@ -68,6 +79,8 @@ UART_HandleTypeDef huart2;
 uint8_t sendButtonBuff[8]={0, 0, 0x04, 0, 0, 0, 0, 0};
 uint8_t buttonColor[3][104];
 uint8_t pixelDataFlow[1024+3*104*4];
+
+TIM_OC_InitTypeDef mysConfigOC;
 //uint8_t pixelReset[1024];
 
 /* USER CODE END PV */
@@ -79,7 +92,11 @@ static void MX_TIM7_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_SPI2_Init(void);
+static void MX_TIM2_Init(void);
 static void MX_NVIC_Init(void);
+
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
+                                
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -87,9 +104,244 @@ extern uint8_t USBD_HID_SendReport (USBD_HandleTypeDef *pdev,
                                  uint8_t *report,
                                  uint16_t len);
 
+#ifdef __GNUC__
+/* With GCC/RAISONANCE, small printf (option LD Linker->Libraries->Small printf
+   set to 'Yes') calls __io_putchar() */
+#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+#else
+#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+#endif /* __GNUC__ */
+/**
+  * @brief  Retargets the C library printf function to the USART.
+  * @param  None
+  * @retval None
+  */
+PUTCHAR_PROTOTYPE
+{
+  /* Place your implementation of fputc here */
+  /* e.g. write a character to the USART2 and Loop until the end of transmission */
+  HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1,100);
+
+  return ch;
+}
+
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+
+
+void Din_1(void)
+{
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 38);
+}
+void Din_0(void)
+{
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 19);
+}
+
+void Send_8bits(uint8_t dat) 
+{   
+		uint8_t i; 
+		Din_0();
+		for(i=0;i<8;i++)   
+		{ 
+			if(dat & 0x80)//1,for "1",H:0.8us,L:0.45us;
+			{      
+				Din_1();				
+			} 		
+			else 	//0 ,for "0",H:0.4us,L:	0.85us			
+			{ 
+			 Din_0();					
+			}
+		   dat=dat<<1; 
+	 }
+}
+//G--R--B
+//MSB first	
+void Send_2811_24bits(uint8_t GData,uint8_t RData,uint8_t BData)
+ {   
+	Send_8bits(GData);  
+	Send_8bits(RData);  
+	Send_8bits(BData);
+ } 
+ 
+
+void rst() 
+{ 
+	 __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);	
+	 //HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1); 
+	 HAL_Delay (1);
+}	
+
+uint8_t AscillToNum(char mychar)
+{
+	uint8_t num=0;
+	switch(mychar)
+	{
+		case '0':num=0;break;
+		case '1':num=1;break;
+		case '2':num=2;break;
+		case '3':num=3;break;
+		case '4':num=4;break;
+		case '5':num=5;break;
+		case '6':num=6;break;
+		case '7':num=7;break;
+		case '8':num=8;break;
+		case '9':num=9;break;
+	}
+	return num;
+}
+
+typedef uint8_t  echoDeng_u8Type;
+
+echoDeng_u8Type rBuffer[numLEDs]={0};
+echoDeng_u8Type gBuffer[numLEDs]={0};
+echoDeng_u8Type bBuffer[numLEDs]={0};
+
+void setAllPixelColor(uint8_t r, uint8_t g, uint8_t b)
+{ 
+				echoDeng_u8Type i=0;
+				for(i=0;i<numLEDs;i++)
+				{
+					rBuffer[i]=r;
+					gBuffer[i]=g;
+					bBuffer[i]=b;
+				}
+				for(i=0;i<numLEDs;i++)
+				{							  
+						Send_2811_24bits(rBuffer[i],gBuffer[i],bBuffer[i]);
+				}
+ }
+ void setPixelColor(uint16_t n, uint8_t r, uint8_t g, uint8_t b)
+ {	 
+				echoDeng_u8Type i=0;
+				rBuffer[n]=r;
+				gBuffer[n]=g;
+				bBuffer[n]=b;
+				for(i=0;i<numLEDs;i++)
+				{							  
+						Send_2811_24bits(rBuffer[i],gBuffer[i],bBuffer[i]);
+				}
+ }
+  void SetPixelColor(uint16_t n, uint32_t c)
+ {	 
+				echoDeng_u8Type i=0;
+				rBuffer[n]=(uint8_t)(c>>16);
+				gBuffer[n]=(uint8_t)(c>>8);
+				bBuffer[n]=(uint8_t)c;
+				for(i=0;i<numLEDs;i++)
+				{							  
+						Send_2811_24bits(rBuffer[i],gBuffer[i],bBuffer[i]);
+				}
+ }
+void PixelUpdate()
+{
+	rst();
+}
+uint32_t Color(uint8_t r, uint8_t g, uint8_t b)
+{
+  return ((uint32_t)r << 16) | ((uint32_t)g <<  8) | b;
+}
+uint32_t Wheel(uint8_t WheelPos)
+{
+  WheelPos = 255 - WheelPos;
+  if(WheelPos < 85) 
+	{
+    return Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  }
+  if(WheelPos < 170) {
+    WheelPos -= 85;
+    return Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  }
+  WheelPos -= 170;
+  return Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+}
+//??
+void rainbow(uint8_t wait)
+{
+  uint16_t i, j;
+
+  for(j=0; j<256; j++) 
+	{
+    for(i=0; i<numLEDs; i++)
+		{
+      SetPixelColor(i, Wheel((i+j) & 255));
+    }
+		PixelUpdate();
+    HAL_Delay (wait);
+  }
+}
+// Slightly different, this makes the rainbow equally distributed throughout
+void rainbowCycle(uint8_t wait) 
+{
+  uint16_t i, j;
+
+  for(j=0; j<256*5; j++) 
+	{ // 5 cycles of all colors on wheel
+    for(i=0; i< numLEDs; i++) 
+	 {
+     SetPixelColor(i, Wheel(((i * 256 / numLEDs) + j) & 255));
+    }
+	  PixelUpdate();
+    HAL_Delay (wait);
+  }
+}
+//Theatre-style crawling lights.???
+void theaterChase(uint32_t c, uint8_t wait) 
+{
+  for (int j=0; j<10; j++) 
+	{  //do 10 cycles of chasing
+    for (int q=0; q < 3; q++) 
+		{
+      for (uint16_t i=0; i < numLEDs; i=i+3)
+			{
+        SetPixelColor(i+q, c);    //turn every third pixel on
+      }
+			PixelUpdate();
+      HAL_Delay(wait);
+
+      for (uint16_t i=0; i < numLEDs; i=i+3) 
+			{
+       SetPixelColor(i+q, 0);        //turn every third pixel off
+      }
+			PixelUpdate();
+    }
+  }
+}
+
+//Theatre-style crawling lights with rainbow effect
+void theaterChaseRainbow(uint8_t wait) 
+{
+  for (int j=0; j < 256; j++) 
+	{     // cycle all 256 colors in the wheel
+    for (int q=0; q < 3; q++)
+		{
+      for (uint16_t i=0; i < numLEDs; i=i+3) 
+			{
+        SetPixelColor(i+q, Wheel( (i+j) % 255));    //turn every third pixel on
+      }
+      PixelUpdate();
+
+      HAL_Delay(wait);
+
+      for (uint16_t i=0; i < numLEDs; i=i+3)
+			{
+        SetPixelColor(i+q, 0);        //turn every third pixel off
+      }
+    }
+  }
+}
+// Fill the dots one after the other with a color
+void colorWipe(uint32_t c, uint8_t wait) 
+{
+	uint16_t i=0;
+  for( i=0; i<numLEDs; i++) 
+	{
+    SetPixelColor(i, c);
+    PixelUpdate();
+    HAL_Delay(wait);
+  }
+}
 
 /* USER CODE END 0 */
 
@@ -98,6 +350,7 @@ int main(void)
 
   /* USER CODE BEGIN 1 */
 	char hello[] = "Hello,World!\n";
+	uint8_t i=0;
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -123,15 +376,16 @@ int main(void)
   MX_USART2_UART_Init();
   MX_SPI1_Init();
   MX_SPI2_Init();
+  MX_TIM2_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
 
   /* USER CODE BEGIN 2 */
 
-	
+	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 	HAL_TIM_Base_Start_IT(&htim7);
-	uint8_t i;
+
 	for(i = 0; i < 104; i++)
 	{
 		/*
@@ -182,7 +436,7 @@ int main(void)
 
   /* USER CODE BEGIN 3 */
 		
-		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_0);
+		//HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_0);
 		sendButtonBuff[2] = 0x04;
 		//HAL_Delay(100);
 		sendButtonBuff[2] = 0x00;
@@ -192,10 +446,30 @@ int main(void)
 		HAL_SPI_Transmit(&hspi2, pixelDataFlow, 1024+3*104*4, 1000);
 		
 		HAL_UART_Transmit(&huart2, (uint8_t *)hello, sizeof(hello), 1000);
-
-
+/*
+		// Some example procedures showing how to display to the pixels:
+		colorWipe(Color(255, 0, 0), 50); // Red
+		colorWipe(Color(0, 255, 0), 50); // Green
+		colorWipe(Color(0, 0, 255), 50); // Blue
 		
-		//HAL_Delay(10000);
+		// Send a theater pixel chase in...
+		theaterChase(Color(127, 127, 127), 50); // White
+		theaterChase(Color(127, 0, 0), 50); // Red
+		theaterChase(Color(0, 0, 127), 50); // Blue
+
+		rainbow(20);//??
+		rainbowCycle(20);//??
+		theaterChaseRainbow(50);//???
+		*/
+		for (i = 0; i<255; i++)
+			Din_0();
+		for (i = 0; i<255; i++)
+		{
+			//Din_0();
+			Din_1();
+		}
+		rst();
+		HAL_Delay(1000);
   }
   /* USER CODE END 3 */
 
@@ -313,6 +587,44 @@ static void MX_SPI2_Init(void)
 
 }
 
+/* TIM2 init function */
+static void MX_TIM2_Init(void)
+{
+
+  TIM_MasterConfigTypeDef sMasterConfig;
+  TIM_OC_InitTypeDef sConfigOC;
+
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 0;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 60;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_ENABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+  HAL_TIM_MspPostInit(&htim2);
+
+}
+
 /* TIM7 init function */
 static void MX_TIM7_Init(void)
 {
@@ -369,22 +681,10 @@ static void MX_USART2_UART_Init(void)
 static void MX_GPIO_Init(void)
 {
 
-  GPIO_InitTypeDef GPIO_InitStruct;
-
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin : PA0 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 }
 
