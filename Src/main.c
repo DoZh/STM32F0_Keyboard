@@ -52,7 +52,7 @@
 
 /* USER CODE BEGIN Includes */
 //#include "ws2812b.h"
-#include "visEffect.h"
+//#include "visEffect.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -86,8 +86,7 @@ static void MX_NVIC_Init(void);
 extern uint8_t USBD_HID_SendReport (USBD_HandleTypeDef *pdev, 
                                  uint8_t *report,
                                  uint16_t len);
-extern void ws2812b_init(void);
-extern void ws2812b_handle(void);
+
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -129,7 +128,7 @@ int main(void)
   MX_NVIC_Init();
 
   /* USER CODE BEGIN 2 */
-	visInit();
+
 	
 	HAL_TIM_Base_Start_IT(&htim7);
 	uint8_t i;
@@ -194,7 +193,7 @@ int main(void)
 		
 		HAL_UART_Transmit(&huart2, (uint8_t *)hello, sizeof(hello), 1000);
 
-		visHandle();
+
 		
 		//HAL_Delay(10000);
   }
