@@ -79,7 +79,7 @@ UART_HandleTypeDef huart2;
 uint8_t sendButtonBuff[8]={0, 0, 0x04, 0, 0, 0, 0, 0};
 uint8_t buttonColor[3][104];
 uint8_t pixelDataFlow[1024+3*104*4];
-
+uint32_t buttonColorIndex;
 TIM_OC_InitTypeDef mysConfigOC;
 //uint8_t pixelReset[1024];
 
@@ -132,11 +132,11 @@ PUTCHAR_PROTOTYPE
 
 void Din_1(void)
 {
-	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 38);
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 48);
 }
 void Din_0(void)
 {
-	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 19);
+	__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 14);
 }
 
 void Send_8bits(uint8_t dat) 
@@ -597,7 +597,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 60;
+  htim2.Init.Period = 64;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
