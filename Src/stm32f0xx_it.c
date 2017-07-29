@@ -41,6 +41,9 @@
 extern uint8_t colorDataFlow[3*104];
 extern uint16_t colorDataIndex;
 extern uint8_t sendButtonBuff[8];
+extern SPI_HandleTypeDef hspi1;
+extern uint8_t buttonDataFlow[16];
+extern uint8_t buttonLookupTable[128];
 uint8_t prepareStop = 0;
 /* USER CODE END 0 */
 
@@ -185,7 +188,29 @@ void TIM7_IRQHandler(void)
   /* USER CODE END TIM7_IRQn 0 */
   HAL_TIM_IRQHandler(&htim7);
   /* USER CODE BEGIN TIM7_IRQn 1 */
+
+	uint8_t countbyte,countbit,buttonDataBuf,keycount = 0;
+	GPIOA->BRR = (uint32_t)GPIO_PIN_4;
+	HAL_SPI_Receive(&hspi1, buttonDataFlow, 16, 1000);
+	GPIOA->BSRR = (uint32_t)GPIO_PIN_4;
+	//for(countbyte = 0; countbyte < 16; countbyte++)
+	for(countbyte = 0; countbyte < 2; countbyte++)
+	{
+		buttonDataBuf = 0xFF - buttonDataFlow[countbyte];
+		if (buttonDataBuf)
+			for(countbit = 0; countbit < 8; countbit++)
+			{
+				if(buttonDataBuf & 1 << countbit && keycount <= 6)
+				{
+					sendButtonBuff[2 + keycount++] = buttonLookupTable[(uint16_t)(countbyte * 8) + countbit];
+				}
+			}
+	}
+	for(;keycount <= 6; keycount++)
+		sendButtonBuff[2 + keycount] = 0;
+
 	USBD_HID_SendReport(&hUsbDeviceFS, sendButtonBuff, 8);
+	
   /* USER CODE END TIM7_IRQn 1 */
 }
 
