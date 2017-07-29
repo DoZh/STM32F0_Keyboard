@@ -136,11 +136,12 @@ void SysTick_Handler(void)
 void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
-
+	__HAL_TIM_CLEAR_IT(&htim2, TIM_IT_CC1);
+	
 	if((colorDataIndex++) < 8*3*104)
 	{
-	//if(colorDataFlow[colorDataIndex >> 8] & 1 << (colorDataIndex % 8))
-		if(colorDataIndex % 2)
+	if(colorDataFlow[colorDataIndex >> 8] & 1 << (colorDataIndex % 8))
+	//if(colorDataIndex % 2)
 		{
 			__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 48);
 			GPIOA->BSRR = (uint32_t)GPIO_PIN_1;
@@ -159,8 +160,8 @@ void TIM2_IRQHandler(void)
 		}
 		else
 		{
-			HAL_TIM_Base_Stop_IT(&htim2);
-			HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
+			//HAL_TIM_Base_Stop(&htim2);
+			HAL_TIM_PWM_Stop_IT(&htim2, TIM_CHANNEL_1);
 			colorDataIndex = 0 ;
 			prepareStop = 0;
 		}
@@ -168,7 +169,7 @@ void TIM2_IRQHandler(void)
   /* USER CODE END TIM2_IRQn 0 */
   //HAL_TIM_IRQHandler(&htim2);
   /* USER CODE BEGIN TIM2_IRQn 1 */
-	__HAL_TIM_CLEAR_IT(&htim2, TIM_IT_UPDATE);
+	
 	//HAL_TIM_PeriodElapsedCallback(&htim2);
 	
   /* USER CODE END TIM2_IRQn 1 */
