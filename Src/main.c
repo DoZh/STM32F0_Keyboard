@@ -386,7 +386,7 @@ int main(void)
 
 	//HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 	
-	HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_1);
+	//HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_1);
 	//HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Base_Start_IT(&htim7);
 
@@ -403,9 +403,9 @@ int main(void)
 		buttonColor[2][i] = ((i + 8) * 5 + 21) / 12 % 0xFF ;
 		*/
 		
-		buttonColor[0][i] = 0x00 ;
-		buttonColor[1][i] = 0x01 ;
-		buttonColor[2][i] = 0x01 ;
+		buttonColor[0][i] = 0xA0 ;
+		buttonColor[1][i] = 0x55 ;
+		buttonColor[2][i] = 0x0A;
 		
 	}
 	
@@ -443,13 +443,16 @@ int main(void)
   /* USER CODE BEGIN 3 */
 		
 		//HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_0);
-		sendButtonBuff[2] = 0x04;
+		//sendButtonBuff[2] = 0x04;
 		//HAL_Delay(100);
 		sendButtonBuff[2] = 0x00;
 		//HAL_GPIO_WritePin(GPIOB, GPIO_PIN_15, GPIO_PIN_RESET);
 		
 		//HAL_SPI_Transmit(&hspi2, pixelReset, 1024, 1000);
+		//__disable_irq();
 		HAL_SPI_Transmit(&hspi2, pixelDataFlow, 1024+3*104*4, 1000);
+		//__enable_irq();
+		
 		
 		HAL_UART_Transmit(&huart2, (uint8_t *)hello, sizeof(hello), 1000);
 /*
@@ -478,7 +481,7 @@ int main(void)
 		*/
 		
 		HAL_Delay(1000);
-		HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_1);
+		//HAL_TIM_PWM_Start_IT(&htim2, TIM_CHANNEL_1);
 		//HAL_TIM_Base_Start_IT(&htim2);
   }
   /* USER CODE END 3 */
