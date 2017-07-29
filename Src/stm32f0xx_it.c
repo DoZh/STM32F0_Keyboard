@@ -38,8 +38,10 @@
 /* USER CODE BEGIN 0 */
 #include "usbd_hid.h"
 #include "usb_device.h"
-
+extern uint8_t colorDataFlow[3*104];
+extern uint16_t colorDataIndex;
 extern uint8_t sendButtonBuff[8];
+uint8_t prepareStop = 0;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
@@ -129,30 +131,46 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
-* @brief This function handles DMA1 channel 4, 5, 6 and 7 interrupts.
-*/
-void DMA1_Channel4_5_6_7_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMA1_Channel4_5_6_7_IRQn 0 */
-
-  /* USER CODE END DMA1_Channel4_5_6_7_IRQn 0 */
-  
-  /* USER CODE BEGIN DMA1_Channel4_5_6_7_IRQn 1 */
-
-  /* USER CODE END DMA1_Channel4_5_6_7_IRQn 1 */
-}
-
-/**
 * @brief This function handles TIM2 global interrupt.
 */
 void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
 
+	if((colorDataIndex++) < 8*3*104)
+	{
+	//if(colorDataFlow[colorDataIndex >> 8] & 1 << (colorDataIndex % 8))
+		if(colorDataIndex % 2)
+		{
+			__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 48);
+			GPIOA->BSRR = (uint32_t)GPIO_PIN_1;
+		}
+	else
+		{
+			__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 14);
+			GPIOA->BRR = (uint32_t)GPIO_PIN_1;
+		}
+	}
+	else
+	{
+		if (prepareStop++ < 2)
+		{
+		__HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
+		}
+		else
+		{
+			HAL_TIM_Base_Stop_IT(&htim2);
+			HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
+			colorDataIndex = 0 ;
+			prepareStop = 0;
+		}
+	}
   /* USER CODE END TIM2_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim2);
+  //HAL_TIM_IRQHandler(&htim2);
   /* USER CODE BEGIN TIM2_IRQn 1 */
-
+	__HAL_TIM_CLEAR_IT(&htim2, TIM_IT_UPDATE);
+	//HAL_TIM_PeriodElapsedCallback(&htim2);
+	
   /* USER CODE END TIM2_IRQn 1 */
 }
 
